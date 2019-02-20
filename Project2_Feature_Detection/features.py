@@ -120,7 +120,17 @@ class HarrisKeypointDetector(KeypointDetector):
         # for direction on how to do this. Also compute an orientation
         # for each pixel and store it in 'orientationImage.'
         # TODO-BLOCK-BEGIN
-        raise Exception("TODO 1: in features.py not implemented")
+        Ix = ndimage.sobel(srcImage,1,mode='reflect')
+        Iy = ndimage.sobel(srcImage,0,mode='reflect')
+
+        Ix2 = np.matmul(Ix, Ix)
+        Iy2 = np.matmul(Iy, Iy)
+        IxIy = np.matmul(Ix, Iy)
+
+        w = ndimage.gaussian_filter(srcImage,0.5,mode='reflect')
+
+        harris_matrix = np.dot(w,[[Ix2, IxIy ],[IxIy, Iy2]])
+        strength = np.linalg.det(harris_matrix) - 0.1(np.matrix.trace(harris_matrix))
         # TODO-BLOCK-END
 
         # Save the harris image as harris.png for the website assignment
