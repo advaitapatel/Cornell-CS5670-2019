@@ -155,9 +155,8 @@ class HarrisKeypointDetector(KeypointDetector):
 
         # TODO 2: Compute the local maxima image
         # TODO-BLOCK-BEGIN
-        raise Exception("TODO 2: in features.py not implemented")
-        # TODO-BLOCK-END
-
+        destImage = (harrisImage == ndimage.filters.maximum_filter(harrisImage, 7))
+        # TODO-BLOCK-END 
         return destImage
 
     def detectKeypoints(self, image):
