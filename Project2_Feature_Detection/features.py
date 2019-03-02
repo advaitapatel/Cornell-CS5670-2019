@@ -202,7 +202,13 @@ class HarrisKeypointDetector(KeypointDetector):
                 # f.angle to the orientation in degrees and f.response to
                 # the Harris score
                 # TODO-BLOCK-BEGIN
-                raise Exception("TODO 3: in features.py not implemented")
+                
+                f.size = 10
+                f.pt = (x,y)
+                f.angle = orientationImage[y][x]
+                print()
+                f.response = harrisImage[y][x]
+
                 # TODO-BLOCK-END
 
                 features.append(f)
