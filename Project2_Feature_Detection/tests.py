@@ -46,7 +46,8 @@ def try_this(todo, run, truth, compare, *args, **kargs):
 
     @return (int): The amount of things that failed
     '''
-    print 'Starting test for TODO {}'.format(todo)
+    print('Starting test for TODO {}'.format(todo))
+    
     failed = 0
     try:
         output = run(*args)
