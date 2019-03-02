@@ -95,7 +95,7 @@ class HarrisKeypointDetector(KeypointDetector):
         outImage[:, :, :] = np.expand_dims(srcNorm, 2)
 
         # Add in the harris keypoints as red
-        outImage[:, :, 2] += harrisImage * (4 * 255 / (np.max(harrisImage)) + 1e-50)
+        outImage[:, :, 2] += harrisImage * (4.00 * 255 / (np.max(harrisImage)) + 1e-50)
         cv2.imwrite("harris.png", outImage)
 
     # Compute harris values of an image.
@@ -123,18 +123,20 @@ class HarrisKeypointDetector(KeypointDetector):
         Ix = ndimage.sobel(srcImage,1,mode='reflect')
         Iy = ndimage.sobel(srcImage,0,mode='reflect')
 
-        Ix2 = np.matmul(Ix, Ix)
-        Iy2 = np.matmul(Iy, Iy)
-        IxIy = np.matmul(Ix, Iy)
+        Ix2 = ndimage.filters.gaussian_filter(Ix**2,0.5,mode='reflect')
+        IxIy = ndimage.filters.gaussian_filter(Ix*Iy,0.5,mode='reflect')
+        Iy2 = ndimage.filters.gaussian_filter(Iy**2,0.5,mode='reflect') 
 
-        w = ndimage.gaussian_filter(srcImage,0.5,mode='reflect')
-
-        harris_matrix = np.dot(w,[[Ix2, IxIy ],[IxIy, Iy2]])
-        strength = np.linalg.det(harris_matrix) - 0.1(np.matrix.trace(harris_matrix))
+        harris_matrix = [[Ix2, IxIy ],[IxIy, Iy2]]
+        determinant = Ix2*Iy2 - IxIy*IxIy
+        trace = Ix2+Iy2
+        harrisImage = determinant - 0.1*(trace**2)
+        orientationImage = np.arctan2(Iy,Ix)*180/np.pi 
+        
         # TODO-BLOCK-END
 
         # Save the harris image as harris.png for the website assignment
-        self.saveHarrisImage(harrisImage, srcImage)
+        #self.saveHarrisImage(harrisImage, srcImage)
 
         return harrisImage, orientationImage
 
