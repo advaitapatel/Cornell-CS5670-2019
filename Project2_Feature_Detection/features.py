@@ -320,7 +320,33 @@ class MOPSFeatureDescriptor(FeatureDescriptor):
             transMx = np.zeros((2, 3))
 
             # TODO-BLOCK-BEGIN
-            raise Exception("TODO 5: in features.py not implemented")
+            # T1
+            (x,y) = f.pt
+            T1 = transformations.get_trans_mx(np.array([x,y,1]))
+            
+            # R
+            angle_x = 0
+            angle_y = 0
+            angle_z = f.angle
+            R = transformations.get_rot_mx(angle_x, angle_y, angle_z)
+
+
+            # S
+            S = transformations.get_scale_mx(1.0/5,1.0/5,0)
+
+            # T2
+            T2  = transformations.get_trans_mx(np.array([x,y,1]))
+
+            trans = np.dot(np.dot(R,np.dot(T2, S)),T1)
+
+            transMx[0][0] = trans[0][0]
+            transMx[0][1] = trans[0][1]
+            transMx[0][2] = trans[0][3]
+
+            transMx[1][0] = trans[1][0]
+            transMx[1][1] = trans[1][1]
+            transMx[1][2] = trans[1][3]
+
             # TODO-BLOCK-END
 
             # Call the warp affine function to do the mapping
@@ -332,9 +358,15 @@ class MOPSFeatureDescriptor(FeatureDescriptor):
             # variance. If the variance is zero then set the descriptor
             # vector to zero. Lastly, write the vector to desc.
             # TODO-BLOCK-BEGIN
-            raise Exception("TODO 6: in features.py not implemented")
+            
+            if float(destImage.std()) >= 0.00005:
+                vec = (destImage - destImage.mean(axis=0))/destImage.std(axis=0)
+                desc[i]= vec.flatten()
+            else:
+                desc[i]=np.zeros((windowSize*windowSize))
+            
             # TODO-BLOCK-END
-
+        
         return desc
 
 
