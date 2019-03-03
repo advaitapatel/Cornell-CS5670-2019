@@ -262,6 +262,7 @@ class SimpleFeatureDescriptor(FeatureDescriptor):
         image = image.astype(np.float32)
         image /= 255.
         grayImage = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
         desc = np.zeros((len(keypoints), 5 * 5))
 
         for i, f in enumerate(keypoints):
@@ -272,7 +273,18 @@ class SimpleFeatureDescriptor(FeatureDescriptor):
             # sampled centered on the feature point. Store the descriptor
             # as a row-major vector. Treat pixels outside the image as zero.
             # TODO-BLOCK-BEGIN
-            raise Exception("TODO 4: in features.py not implemented")
+            feature_points = []
+            for b in range(-2,3):
+                for a in range(-2,3):
+                    #print(grayImage[x+a][y+b])
+                    if x+a >=0  and x+a < len(grayImage) and y+b >=0 and y+b < len(grayImage[0]): 
+                        val = grayImage[y+b][x+a]
+                        #print(y+b,x+a)
+                        feature_points.append(val)
+                    else:
+                        feature_points.append(0)
+            #print(feature_points)
+            desc[i] = feature_points 
             # TODO-BLOCK-END
 
         return desc
