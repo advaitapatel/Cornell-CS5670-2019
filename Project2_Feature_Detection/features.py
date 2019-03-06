@@ -490,9 +490,19 @@ class SSDFeatureMatcher(FeatureMatcher):
         l1 = len(desc1)
         l2 = len(desc2)
 
-        #for im1 in xrange(l1):
-        #    for im2 in xrange(l2):
-                #desc1[im1], desc2[im2]
+        for im1 in xrange(l1):
+            obj = cv2.DMatch()
+            obj.queryIdx = im1
+            min_dist = float('INF')
+            min_loc = im1
+            for im2 in xrange(l2):
+                eucledian_dist = spatial.distance.euclidean(desc1[im1], desc2[im2])
+                if eucledian_dist < min_dist:
+                    min_dist = eucledian_dist
+                    min_loc = im2
+            obj.trainIdx = min_loc
+            obj.distance = min_dist
+            matches.append(obj) 
         # TODO-BLOCK-END
 
         return matches
