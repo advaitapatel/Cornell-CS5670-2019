@@ -206,7 +206,6 @@ class HarrisKeypointDetector(KeypointDetector):
                 f.size = 10
                 f.pt = (x,y)
                 f.angle = orientationImage[y][x]
-                print()
                 f.response = harrisImage[y][x]
 
                 # TODO-BLOCK-END
@@ -276,14 +275,12 @@ class SimpleFeatureDescriptor(FeatureDescriptor):
             feature_points = []
             for b in range(-2,3):
                 for a in range(-2,3):
-                    #print(grayImage[x+a][y+b])
                     if x+a >=0  and x+a < len(grayImage) and y+b >=0 and y+b < len(grayImage[0]): 
                         val = grayImage[y+b][x+a]
                         #print(y+b,x+a)
                         feature_points.append(val)
                     else:
                         feature_points.append(0)
-            #print(feature_points)
             desc[i] = feature_points 
             # TODO-BLOCK-END
 
@@ -322,22 +319,21 @@ class MOPSFeatureDescriptor(FeatureDescriptor):
             # TODO-BLOCK-BEGIN
             # T1
             (x,y) = f.pt
-            T1 = transformations.get_trans_mx(np.array([x,y,1]))
+            T1 = transformations.get_trans_mx(np.array([-x,-y,0]))
             
             # R
             angle_x = 0
             angle_y = 0
-            angle_z = f.angle
+            angle_z = -f.angle/180*np.pi
             R = transformations.get_rot_mx(angle_x, angle_y, angle_z)
 
-
             # S
-            S = transformations.get_scale_mx(1.0/5,1.0/5,0)
+            S = transformations.get_scale_mx(0.2,0.2,1.0)
 
             # T2
-            T2  = transformations.get_trans_mx(np.array([x,y,1]))
-
-            trans = np.dot(np.dot(R,np.dot(T2, S)),T1)
+            T2  = transformations.get_trans_mx(np.array([4.0,4.0,0]))
+            
+            trans =  np.dot(T2,np.dot(S,np.dot(R, T1)))
 
             transMx[0][0] = trans[0][0]
             transMx[0][1] = trans[0][1]
@@ -359,12 +355,13 @@ class MOPSFeatureDescriptor(FeatureDescriptor):
             # vector to zero. Lastly, write the vector to desc.
             # TODO-BLOCK-BEGIN
             
-            if float(destImage.std()) >= 0.00005:
-                vec = (destImage - destImage.mean(axis=0))/destImage.std(axis=0)
+            destImage = destImage - destImage.mean()
+            if float(destImage.std()) >= 1e-5:
+                vec = destImage/destImage.std()
                 desc[i]= vec.flatten()
             else:
-                desc[i]=np.zeros((windowSize*windowSize))
-            
+                desc[i]=np.zeros(windowSize*windowSize)
+
             # TODO-BLOCK-END
         
         return desc
@@ -490,7 +487,12 @@ class SSDFeatureMatcher(FeatureMatcher):
         # Note: multiple features from the first image may match the same
         # feature in the second image.
         # TODO-BLOCK-BEGIN
-        raise Exception("TODO 7: in features.py not implemented")
+        l1 = len(desc1)
+        l2 = len(desc2)
+
+        #for im1 in xrange(l1):
+        #    for im2 in xrange(l2):
+                #desc1[im1], desc2[im2]
         # TODO-BLOCK-END
 
         return matches
