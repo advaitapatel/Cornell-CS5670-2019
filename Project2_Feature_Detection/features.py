@@ -544,7 +544,33 @@ class RatioFeatureMatcher(FeatureMatcher):
         # feature in the second image.
         # You don't need to threshold matches in this function
         # TODO-BLOCK-BEGIN
-        raise Exception("TODO 8: in features.py not implemented")
+
+        # track 2
+        l1 = len(desc1)
+        l2 = len(desc2)
+
+        for im1 in xrange(l1):
+            obj = cv2.DMatch()
+            obj.queryIdx = im1
+            min_dist = [float('INF'),float('INF')]
+            min_loc = [im1,im1]
+            for im2 in xrange(l2):
+                eucledian_dist = spatial.distance.euclidean(desc1[im1], desc2[im2])
+                if eucledian_dist < max(min_dist):
+                    if min_dist[0]>=min_dist[1]:
+                        min_dist[0] = eucledian_dist
+                        min_loc[0] = im2
+                    else:
+                        min_dist[1] = eucledian_dist
+                        min_loc[1] = im2
+            ratio = min(min_dist)/max(min_dist)
+            if min_dist[0]<min_dist[1]:
+                obj.trainIdx = min_loc[0]
+            else:
+                obj.trainIdx = min_loc[1]
+            obj.distance = ratio
+            matches.append(obj) 
+
         # TODO-BLOCK-END
 
         return matches
