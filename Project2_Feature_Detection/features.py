@@ -275,9 +275,8 @@ class SimpleFeatureDescriptor(FeatureDescriptor):
             feature_points = []
             for b in range(-2,3):
                 for a in range(-2,3):
-                    if x+a >=0  and x+a < len(grayImage) and y+b >=0 and y+b < len(grayImage[0]): 
+                    if x+a >=0  and x+a < len(grayImage[0]) and y+b >=0 and y+b < len(grayImage): 
                         val = grayImage[y+b][x+a]
-                        #print(y+b,x+a)
                         feature_points.append(val)
                     else:
                         feature_points.append(0)
