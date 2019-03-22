@@ -71,7 +71,23 @@ def computeSphericalWarpMappings(dstShape, f, k1, k2):
     # as output for your code. They should all have the shape
     # (img_height, img_width)
     # TODO-BLOCK-BEGIN
-    raise Exception("TODO in warp.py not implemented")
+    x_spher = np.sin(xf)* np.cos(yf)
+    y_spher = np.sin(yf)
+    z_spher = np.cos(xf)*np.cos(yf)
+
+    # project the point 
+    x_proj = x_spher/z_spher
+    y_proj = y_spher/z_spher
+
+    # radial distortion
+    r_square = x_proj**2 + y_proj**2
+    x_dis = x_proj * (1+ k1*r_square + k2*r_square**2)
+    y_dis = y_proj * (1+ k1*r_square + k2*r_square**2)
+
+    # applying x focal length 
+    xt = x_dis
+    yt = y_dis
+ 
     # TODO-BLOCK-END
     # END TODO
     # Convert back to regular pixel coordinates
