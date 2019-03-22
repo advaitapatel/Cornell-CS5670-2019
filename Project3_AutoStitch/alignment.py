@@ -33,6 +33,8 @@ def computeHomography(f1, f2, matches, A_out=None):
     A_matrix_shape = (num_rows,num_cols)
     A = np.zeros(A_matrix_shape)
 
+    A_index = 0
+
     for i in range(len(matches)):
         m = matches[i]
         (a_x, a_y) = f1[m.queryIdx].pt
@@ -42,7 +44,14 @@ def computeHomography(f1, f2, matches, A_out=None):
         #Fill in the matrix A in this loop.
         #Access elements using square brackets. e.g. A[0,0]
         #TODO-BLOCK-BEGIN
-        raise Exception("TODO in alignment.py not implemented")
+        row1 = [a_x, a_y, 1, 0, 0, 0, -1*b_x*a_x, -1*b_x*a_y, -1*b_x]
+        row2 = [0, 0, 0, a_x, a_y, 1, -1*b_y*a_x, -1*b_y*a_y, -1*b_y]
+
+        A[A_index] = row1
+        A[A_index+1] = row2
+        
+        A_index+=2
+
         #TODO-BLOCK-END
         #END TODO
 
@@ -62,7 +71,9 @@ def computeHomography(f1, f2, matches, A_out=None):
     #BEGIN TODO 3
     #Fill the homography H with the appropriate elements of the SVD
     #TODO-BLOCK-BEGIN
-    raise Exception("TODO in alignment.py not implemented")
+
+    H = Vt[-1].reshape(3,3)
+
     #TODO-BLOCK-END
     #END TODO
 
