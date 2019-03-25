@@ -71,7 +71,22 @@ def accumulateBlend(img, acc, M, blendWidth):
     # BEGIN TODO 10
     # Fill in this routine
     #TODO-BLOCK-BEGIN
-    raise Exception("TODO in blend.py not implemented")
+
+    row = len(img)
+    col = len(img[0])
+
+    # alpha values
+    # a1
+    # a2
+    # a3
+
+
+    for x in xrange(row):
+      for y in xrange(col):
+        print(img[x][y])
+        
+
+
     #TODO-BLOCK-END
     # END TODO
 
@@ -87,7 +102,13 @@ def normalizeBlend(acc):
     # BEGIN TODO 11
     # fill in this routine..
     #TODO-BLOCK-BEGIN
-    raise Exception("TODO in blend.py not implemented")
+    img = np.zeros(len(acc), len(acc[0]), 3)
+    for x in xrange(len(acc)):
+      for y in xrange(len(acc[1])):
+        img[x,y,0] = acc[x,y,0]/acc[x,y,3]
+        img[x,y,1] = acc[x,y,1]/acc[x,y,3]
+        img[x,y,2] = acc[x,y,0]/acc[x,y,3]
+  
     #TODO-BLOCK-END
     # END TODO
     return img
