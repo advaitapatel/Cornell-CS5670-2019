@@ -87,7 +87,7 @@ def accumulateBlend(img, acc, M, blendWidth):
     img_a[:,:,2] = img[:,:,2]
 
     M_inv = np.linalg.inv(M)
-    warped_image = cv2.warpPerspective(img_a, M_inv, (acc.shape[1],acc.shape[0]), flags=(cv2.WARP_INVERSE_MAP, cv2.INTER_NEAREST, borderMode=cv2.BORDER_REFLECT_101))
+    warped_image = cv2.warpPerspective(img_a, M_inv, (acc.shape[1],acc.shape[0]), flags=(cv2.WARP_INVERSE_MAP + cv2.INTER_NEAREST))
 
     for column in range(minX, maxX):
         warped_image[:, column, :3] = warped_image[:, column, :3] * a[column - minX] # calculate feathered RGB value
