@@ -125,9 +125,8 @@ def alignPair(f1, f2, matches, m, nRANSAC, RANSACthresh):
         if m == eTranslate: 
             new_matches = random.sample(matches, 1)
             # estimate motion for translation
-            translation = new_matches[0].distance # x, y
-            H[0,2]=translation[0]
-            H[1,2]=translation[1]
+            H[0,2]=f2[new_matches[0].trainIdx].pt[0] - f1[new_matches[0].queryIdx].pt[0]
+            H[1,2]=f2[new_matches[0].trainIdx].pt[1] - f1[new_matches[0].queryIdx].pt[1]
         
         elif m == eHomography:
             new_matches = random.sample(matches, 4)
@@ -139,7 +138,7 @@ def alignPair(f1, f2, matches, m, nRANSAC, RANSACthresh):
             maxCount = len(inliers)
             bestInliers = inliers
     
-        M = leastSquaresFit(f1, f2, matches, m, bestInliers)
+    M = leastSquaresFit(f1, f2, matches, m, bestInliers)
 
     #TODO-BLOCK-END
     #END TODO
@@ -175,8 +174,6 @@ def getInliers(f1, f2, matches, M, RANSACthresh):
         #by M, is within RANSACthresh of its match in f2.
         #If so, append i to inliers
         #TODO-BLOCK-BEGIN
-
-        
         queryIdx = matches[i].queryIdx
         trainIdx = matches[i].trainIdx
 
@@ -184,10 +181,10 @@ def getInliers(f1, f2, matches, M, RANSACthresh):
         point = np.array([f1[queryIdx].pt[0], f1[queryIdx].pt[1], 1]).T
 
         # Transform the matched features in f1 by M.
-        transformation = np.dot(M, point)
+        transformedQueryFeature = np.dot(M, point)
 
         # x', y'
-        transformation = transformation//transformation[2]
+        transformation = transformedQueryFeature//transformedQueryFeature[2]
         x2 = f2[trainIdx].pt[0]
         y2 = f2[trainIdx].pt[1]
 
@@ -240,17 +237,18 @@ def leastSquaresFit(f1, f2, matches, m, inlier_indices):
             #TODO-BLOCK-BEGIN
 
             point1 = f1[matches[inlier_indices[i]].queryIdx].pt
-            point2 = f2[matches[inlier_indices[i]].queryIdx].pt
+            point2 = f2[matches[inlier_indices[i]].trainIdx].pt
 
             u += point2[0] - point1[0]
-            v += point2[1] - point1[0]
+            v += point2[1] - point1[1]
 
 
             #TODO-BLOCK-END
             #END TODO
 
-        u /= len(inlier_indices)
-        v /= len(inlier_indices)
+        if len(inlier_indices) != 0:
+            u /= len(inlier_indices)
+            v /= len(inlier_indices)
 
         M[0,2] = u
         M[1,2] = v

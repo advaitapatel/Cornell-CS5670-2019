@@ -72,19 +72,44 @@ def accumulateBlend(img, acc, M, blendWidth):
     # Fill in this routine
     #TODO-BLOCK-BEGIN
 
-    row = len(img)
-    col = len(img[0])
+    minX, minY, maxX, maxY = imageBoundingBox(img, M)
 
-    # alpha values
-    # a1
-    # a2
-    # a3
+    # feathering
+    if (maxX - minX) < 2*blendWidth:
+        blendWidth = (maxX - minX) / 2 - 1
+    alpha = np.concatenate((np.linspace(0., 1., blendWidth),
+                            np.ones(maxX - minX - 2*blendWidth),
+                            np.linspace(1., 0., blendWidth)))
 
+    # new matrix with space for alpha channel
+    withalpha = np.ones((img.shape[0], img.shape[1], 4))
 
-    for x in xrange(row):
-      for y in xrange(col):
-        print(img[x][y])
-        
+    # move in image channels
+    withalpha[:,:,0] = img[:,:,0]
+    withalpha[:,:,1] = img[:,:,1]
+    withalpha[:,:,2] = img[:,:,2]
+
+    # pad for linear interpolation
+    #withalpha = np.pad(withalpha, ((2,2), (2,2), (0,0)), 'edge')
+
+    # inverse transformation matrix
+    M_inv = np.linalg.inv(M)
+
+    # NOTE: Using nearest interpolation. Linear interpolation can be used by using flag 'cv2.INTER_LINEAR'.
+    # However this creates hairline borders around the individual images.
+    warped = cv2.warpPerspective(withalpha, M_inv, (acc.shape[1],acc.shape[0]), flags=(cv2.WARP_INVERSE_MAP + cv2.INTER_NEAREST))
+
+    # for column in space of panorama reserved for this image
+    for column in range(minX, maxX):
+        warped[:, column, :3] = warped[:, column, :3] * alpha[column - minX] # calculate feathered RGB value
+
+        vals = np.full((warped.shape[0]), alpha[column - minX])
+        warped[:, column, 3] = vals # assign correct values to opacity channel
+
+        for row in range(minY, maxY):
+            if(np.array_equal(warped[row, column, :3], [0,0,0])): # if the pixel is black
+                warped[row, column, 3] = 0.0; # set opacity to 0
+            acc[row, column] += warped[row, column] # save RGB & alpha value of pixel in accumulator
 
 
     #TODO-BLOCK-END
@@ -102,13 +127,11 @@ def normalizeBlend(acc):
     # BEGIN TODO 11
     # fill in this routine..
     #TODO-BLOCK-BEGIN
-    img = np.zeros(len(acc), len(acc[0]), 3)
-    for x in xrange(len(acc)):
-      for y in xrange(len(acc[1])):
-        img[x,y,0] = acc[x,y,0]/acc[x,y,3]
-        img[x,y,1] = acc[x,y,1]/acc[x,y,3]
-        img[x,y,2] = acc[x,y,0]/acc[x,y,3]
-
+    img = np.zeros((acc.shape[0], acc.shape[1], 3), dtype=np.uint8)
+    for row in range(acc.shape[0]):
+        for column in range(acc.shape[1]):
+            if acc[row, column, 3] > 0:
+                img[row, column] = (acc[row, column, 0:3] / acc[row, column, 3]).astype(int)
     #TODO-BLOCK-END
     # END TODO
     return img
