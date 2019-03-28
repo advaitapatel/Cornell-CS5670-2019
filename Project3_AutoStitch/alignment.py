@@ -184,11 +184,10 @@ def getInliers(f1, f2, matches, M, RANSACthresh):
         transformedQueryFeature = np.dot(M, point)
 
         # x', y'
-        transformation = transformedQueryFeature//transformedQueryFeature[2]
-        x2 = f2[trainIdx].pt[0]
-        y2 = f2[trainIdx].pt[1]
+        transformation = transformedQueryFeature/transformedQueryFeature[2]
+        training_points = np.array(f2[trainIdx].pt)[:2]
 
-        if scipy.spatial.distance.euclidean((x2,y2), transformation[:2]) <= RANSACthresh:
+        if(np.linalg.norm(transformation[:2]-training_points) <= RANSACthresh): # compare the points, check against threshold
             inlier_indices.append(i)
             
          #TODO-BLOCK-END
@@ -246,9 +245,8 @@ def leastSquaresFit(f1, f2, matches, m, inlier_indices):
             #TODO-BLOCK-END
             #END TODO
 
-        if len(inlier_indices) != 0:
-            u /= len(inlier_indices)
-            v /= len(inlier_indices)
+        u /= len(inlier_indices)
+        v /= len(inlier_indices)
 
         M[0,2] = u
         M[1,2] = v

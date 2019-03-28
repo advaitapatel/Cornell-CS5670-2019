@@ -81,8 +81,8 @@ def computeSphericalWarpMappings(dstShape, f, k1, k2):
 
     # radial distortion
     r_square = x_proj**2 + y_proj**2
-    x_dis = x_proj * (1+ k1*r_square + k2*r_square**2)
-    y_dis = y_proj * (1+ k1*r_square + k2*r_square**2)
+    x_dis = x_proj * (1+ k1*r_square + k2*r_square*r_square)
+    y_dis = y_proj * (1+ k1*r_square + k2*r_square*r_square)
 
     # applying x focal length 
     xt = x_dis
