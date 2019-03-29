@@ -29,29 +29,26 @@ def imageBoundingBox(img, M):
     """
     #TODO 8
     #TODO-BLOCK-BEGIN
-    #raise Exception("TODO in blend.py not implemented")
+    # Calculate corner points when applying homography
+    corners = []
+    corners.append(np.dot(M, np.array([0,0,1])))
+    corners.append(np.dot(M, np.array([0,img.shape[1],1])))
+    corners.append(np.dot(M, np.array([img.shape[0],0,1])))
+    corners.append(np.dot(M, np.array([img.shape[0],img.shape[1],1])))
 
-    left_bottom=(0,0,1)
-    left_top=(0, img.shape[1]-1, 1)
-    right_bottom= (img.shape[0]-1, 0, 1)
-    right_top=(img.shape[0]-1, img.shape[1]-1, 1)
+    # Convert back to cartesian coordinates
+    corners = [corner[:2]/corner[2] for corner in corners]
 
-    points=[]
-    points.append(np.dot(M, left_top))
-    points.append(np.dot(M, right_top))
-    points.append(np.dot(M, left_bottom))
-    points.append(np.dot(M, right_bottom))
+    # Get Xs
+    xs = sorted([corner[0] for corner in corners])
+    # Get Ys
+    ys = sorted([corner[1] for corner in corners])
 
-    points=[(p[0]/p[2], p[1]/p[2], 1) for p in points]
-
-    x=[a[0] for a in points]
-    y=[a[1] for a in points]
-
-    minX=min(x)
-    minY=min(y)
-    maxX=max(x)
-    maxY= max(y)
-
+    # Get the second smallest and largest value for the bounding box
+    minX = xs[1]
+    minY = ys[1]
+    maxX = xs[-2]
+    maxY = ys[-2]
     #TODO-BLOCK-END
     return int(minX), int(minY), int(maxX), int(maxY)
 
@@ -71,34 +68,44 @@ def accumulateBlend(img, acc, M, blendWidth):
     # BEGIN TODO 10
     # Fill in this routine
     #TODO-BLOCK-BEGIN
-
     minX, minY, maxX, maxY = imageBoundingBox(img, M)
 
-    # putting alpha
+    # feathering
     if (maxX - minX) < 2*blendWidth:
         blendWidth = (maxX - minX) / 2 - 1
+    alpha = np.concatenate((np.linspace(0., 1., blendWidth),
+                            np.ones(maxX - minX - 2*blendWidth),
+                            np.linspace(1., 0., blendWidth)))
 
-    # alpha represents feathering to the left end and the right end of the image  
-    a = np.concatenate((np.linspace(0., 1., blendWidth), np.ones(maxX - minX - 2*blendWidth), np.linspace(1., 0., blendWidth)))
+    # new matrix with space for alpha channel
+    withalpha = np.ones((img.shape[0], img.shape[1], 4))
 
-    img_a = np.ones((img.shape[0], img.shape[1], 4))
-    img_a[:,:,0] = img[:,:,0]
-    img_a[:,:,1] = img[:,:,1]
-    img_a[:,:,2] = img[:,:,2]
+    # move in image channels
+    withalpha[:,:,0] = img[:,:,0]
+    withalpha[:,:,1] = img[:,:,1]
+    withalpha[:,:,2] = img[:,:,2]
 
+    # pad for linear interpolation
+    #withalpha = np.pad(withalpha, ((2,2), (2,2), (0,0)), 'edge')
+
+    # inverse transformation matrix
     M_inv = np.linalg.inv(M)
-    warped_image = cv2.warpPerspective(img_a, M_inv, (acc.shape[1],acc.shape[0]), flags=(cv2.WARP_INVERSE_MAP + cv2.INTER_NEAREST))
 
+    # NOTE: Using nearest interpolation. Linear interpolation can be used by using flag 'cv2.INTER_LINEAR'.
+    # However this creates hairline borders around the individual images.
+    warped = cv2.warpPerspective(withalpha, M_inv, (acc.shape[1],acc.shape[0]), flags=(cv2.WARP_INVERSE_MAP + cv2.INTER_NEAREST))
+
+    # for column in space of panorama reserved for this image
     for column in range(minX, maxX):
-        warped_image[:, column, :3] = warped_image[:, column, :3] * a[column - minX] # calculate feathered RGB value
+        warped[:, column, :3] = warped[:, column, :3] * alpha[column - minX] # calculate feathered RGB value
 
-        opacity = np.full((warped_image.shape[0]), a[column - minX])
-        warped_image[:, column, 3] = opacity
+        vals = np.full((warped.shape[0]), alpha[column - minX])
+        warped[:, column, 3] = vals # assign correct values to opacity channel
 
         for row in range(minY, maxY):
-            if(np.array_equal(warped_image[row, column, :3], [0,0,0])):
-                warped_image[row, column, 3] = 0.0; 
-            acc[row, column] += warped_image[row, column] 
+            if(np.array_equal(warped[row, column, :3], [0,0,0])): # if the pixel is black
+                warped[row, column, 3] = 0.0; # set opacity to 0
+            acc[row, column] += warped[row, column] # save RGB & alpha value of pixel in accumulator
 
     #TODO-BLOCK-END
     # END TODO
@@ -126,22 +133,6 @@ def normalizeBlend(acc):
 
 
 def getAccSize(ipv):
-    """
-       This function takes a list of ImageInfo objects consisting of images and
-       corresponding transforms and Returns useful information about the accumulated
-       image.
-
-       INPUT:
-         ipv: list of ImageInfo objects consisting of image (ImageInfo.img) and transform(image (ImageInfo.position))
-       OUTPUT:
-         accWidth: Width of accumulator image(minimum width such that all tranformed images lie within acc)
-         accWidth: Height of accumulator image(minimum height such that all tranformed images lie within acc)
-
-         channels: Number of channels in the accumulator image
-         width: Width of each image(assumption: all input images have same width)
-         translation: transformation matrix so that top-left corner of accumulator image is origin
-    """
-
     # Compute bounding box for the mosaic
     minX = sys.maxint
     minY = sys.maxint
@@ -161,15 +152,11 @@ def getAccSize(ipv):
         # BEGIN TODO 9
         # add some code here to update minX, ..., maxY
         #TODO-BLOCK-BEGIN
-        img_minX, img_minY, img_maxX, img_maxY = imageBoundingBox(img, M)
-        if img_minX < minX:
-            minX= img_minX
-        if img_minY< minY:
-            minY= img_minY
-        if img_maxX> maxX:
-            maxX= img_maxX
-        if img_maxY> maxY:
-            maxY= img_maxY
+        minX_box, minY_box, maxX_box, maxY_box = imageBoundingBox(img, M)
+        minX = min(minX, minX_box)
+        minY = min(minY, minY_box)
+        maxX = max(maxX, maxX_box)
+        maxY = max(maxY, maxY_box)
         #TODO-BLOCK-END
         # END TODO
 
@@ -261,8 +248,9 @@ def blendImages(ipv, blendWidth, is360=False, A_out=None):
     # Note: warpPerspective does forward mapping which means A is an affine
     # transform that maps accumulator coordinates to final panorama coordinates
     #TODO-BLOCK-BEGIN
-    if (is360):
-      A = computeDrift(x_init, y_init,x_final, y_final, width)
+
+    if(is360):
+        A = computeDrift(x_init, y_init, x_final, y_final, width)
 
     #TODO-BLOCK-END
     # END TODO
@@ -276,4 +264,3 @@ def blendImages(ipv, blendWidth, is360=False, A_out=None):
     )
 
     return croppedImage
-
