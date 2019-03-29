@@ -1,14 +1,13 @@
 import math
-import random
-
 import cv2
 import numpy as np
-import scipy 
+import random
+
+import scipy
 from scipy import spatial
 
 eTranslate = 0
 eHomography = 1
-
 
 def computeHomography(f1, f2, matches, A_out=None):
     '''
@@ -23,7 +22,7 @@ def computeHomography(f1, f2, matches, A_out=None):
                  in other TODOs, call computeHomography(f1,f2,matches)
     Output:
         H -- 2D homography (3x3 matrix)
-        Takes two lists of features, f1 and f2, and a list of feature
+        Takes two lists of features, f1 and f2, and a list of feature 
         matches, and estimates a homography from image 1 to image 2 from the matches.
     '''
     num_matches = len(matches)
@@ -31,11 +30,9 @@ def computeHomography(f1, f2, matches, A_out=None):
     # Dimensions of the A matrix in the homogenous linear
     # equation Ah = 0
     num_rows = 2 * num_matches
-    num_cols = 9
+    num_cols = 9 
     A_matrix_shape = (num_rows,num_cols)
     A = np.zeros(A_matrix_shape)
-
-    A_index = 0
 
     for i in range(len(matches)):
         m = matches[i]
@@ -46,14 +43,21 @@ def computeHomography(f1, f2, matches, A_out=None):
         #Fill in the matrix A in this loop.
         #Access elements using square brackets. e.g. A[0,0]
         #TODO-BLOCK-BEGIN
-        row1 = [a_x, a_y, 1, 0, 0, 0, -1*b_x*a_x, -1*b_x*a_y, -1*b_x]
-        row2 = [0, 0, 0, a_x, a_y, 1, -1*b_y*a_x, -1*b_y*a_y, -1*b_y]
+        row = i * 2
 
-        A[A_index] = row1
-        A[A_index+1] = row2
-        
-        A_index+=2
+        A[row][0] = a_x
+        A[row][1] = a_y
+        A[row][2] = 1
+        A[row][6] = -b_x * a_x
+        A[row][7] = -b_x * a_y
+        A[row][8] = -b_x
 
+        A[row + 1][3] = a_x
+        A[row + 1][4] = a_y
+        A[row + 1][5] = 1
+        A[row + 1][6] = -b_y * a_x
+        A[row + 1][7] = -b_y * a_y
+        A[row + 1][8] = -b_y
         #TODO-BLOCK-END
         #END TODO
 
@@ -73,9 +77,19 @@ def computeHomography(f1, f2, matches, A_out=None):
     #BEGIN TODO 3
     #Fill the homography H with the appropriate elements of the SVD
     #TODO-BLOCK-BEGIN
+    i = Vt.shape[0] - 1
+ 
+    H[0][0] = Vt[i][0]
+    H[0][1] = Vt[i][1]
+    H[0][2] = Vt[i][2]
+    H[1][0] = Vt[i][3]
+    H[1][1] = Vt[i][4]
+    H[1][2] = Vt[i][5]
+    H[2][0] = Vt[i][6]
+    H[2][1] = Vt[i][7]
+    H[2][2] = Vt[i][8]
 
-    H = Vt[-1].reshape(3,3)
-
+    H /= H[2][2]
     #TODO-BLOCK-END
     #END TODO
 
@@ -103,43 +117,49 @@ def alignPair(f1, f2, matches, m, nRANSAC, RANSACthresh):
         For the transformation with the maximum number of inliers,
         compute the least squares motion estimate using the inliers,
         and return as a transformation matrix M.
-    '''
+    '''    
 
     #BEGIN TODO 4
-    #Write this entire method.  You need to handle two types of
-    #motion models, pure translations (m == eTranslation) and
+    #Write this entire method.  You need to handle two types of 
+    #motion models, pure translations (m == eTranslation) and 
     #full homographies (m == eHomography).  However, you should
-    #only have one outer loop to perform the RANSAC code, as
+    #only have one outer loop to perform the RANSAC code, as 
     #the use of RANSAC is almost identical for both cases.
 
     #Your homography handling code should call compute_homography.
     #This function should also call get_inliers and, at the end,
     #least_squares_fit.
     #TODO-BLOCK-BEGIN
+    inliers = []
 
-    maxCount = 0
-    bestInliers = []
-    
-    for i in xrange(nRANSAC):
-        H = np.eye(3)
-        if m == eTranslate: 
-            new_matches = random.sample(matches, 1)
-            # estimate motion for translation
-            H[0,2]=f2[new_matches[0].trainIdx].pt[0] - f1[new_matches[0].queryIdx].pt[0]
-            H[1,2]=f2[new_matches[0].trainIdx].pt[1] - f1[new_matches[0].queryIdx].pt[1]
-        
-        elif m == eHomography:
-            new_matches = random.sample(matches, 4)
-            # estimate motion for homography
-            H = computeHomography(f1, f2, new_matches)
-        
-        inliers = getInliers(f1, f2, matches, H, RANSACthresh)
-        if len(inliers) > maxCount:
-            maxCount = len(inliers)
-            bestInliers = inliers
-    
-    M = leastSquaresFit(f1, f2, matches, m, bestInliers)
+    for i in range(nRANSAC):
+        idx = i % len(matches) 
 
+        if (m == eTranslate):
+            f1_point = f1[matches[idx].queryIdx]
+            x_pt1 = f1_point.pt[0]
+            y_pt1 = f1_point.pt[1]
+
+            f2_point = f2[matches[idx].trainIdx]
+            x_pt2 = f2_point.pt[0]
+            y_pt2 = f2_point.pt[1]
+
+            H = np.eye(3)
+            H[0][2] = x_pt2-x_pt1
+            H[1][2] = y_pt2-y_pt1
+
+        else:
+            match_set = []
+            match_set.extend([matches[idx], matches[(idx+1)%len(matches)],
+                matches[(idx+2)%len(matches)], matches[(idx+3)%len(matches)]])
+            H = computeHomography(f1, f2, match_set)
+
+        inliers_new = getInliers(f1, f2, matches, H, RANSACthresh)
+        if len(inliers_new) > len(inliers):
+            inliers = inliers_new
+
+    M = leastSquaresFit(f1, f2, matches, m, inliers)
+    M = M/M[2][2]
     #TODO-BLOCK-END
     #END TODO
     return M
@@ -170,29 +190,28 @@ def getInliers(f1, f2, matches, M, RANSACthresh):
 
     for i in range(len(matches)):
         #BEGIN TODO 5
-        #Determine if the ith matched feature f1[id1], when transformed
+        #Determine if the ith matched feature f1[id1], when transformed 
         #by M, is within RANSACthresh of its match in f2.
         #If so, append i to inliers
         #TODO-BLOCK-BEGIN
-        queryIdx = matches[i].queryIdx
-        trainIdx = matches[i].trainIdx
+        f1_mat = np.zeros((3,1))
+        f2_mat = np.zeros((3,1))
+        f1_mat[:,0] = [f1[matches[i].queryIdx].pt[0],f1[matches[i].queryIdx].pt[1],1 ]
+        f2_mat[:,0] = [f2[matches[i].trainIdx].pt[0], f2[matches[i].trainIdx].pt[1], 1]
+        '''f1matrix[0][0] = f1[matches[i].queryIdx].pt[0]
+        f1matrix[1][0] = f1[matches[i].queryIdx].pt[1]
+        f1matrix[2][0] = 1
+        f2matrix[0][0] = f2[matches[i].trainIdx].pt[0]
+        f2matrix[1][0] = f2[matches[i].trainIdx].pt[1]
+        f2matrix[2][0] = 1'''
 
-        # make points
-        point = np.array([f1[queryIdx].pt[0], f1[queryIdx].pt[1], 1]).T
-
-        # Transform the matched features in f1 by M.
-        transformedQueryFeature = np.dot(M, point)
-
-        # x', y'
-        transformation = transformedQueryFeature/transformedQueryFeature[2]
-        training_points = np.array(f2[trainIdx].pt)[:2]
-
-        if(np.linalg.norm(transformation[:2]-training_points) <= RANSACthresh): # compare the points, check against threshold
+        f_transform = np.dot(M, f1_mat)
+        f_transform /= f_transform[2][0]
+        euclid_dist = scipy.spatial.distance.euclidean(f_transform, f2_mat)
+        if (euclid_dist < RANSACthresh):
             inlier_indices.append(i)
-            
-         #TODO-BLOCK-END
+        #TODO-BLOCK-END
         #END TODO
-
     return inlier_indices
 
 def leastSquaresFit(f1, f2, matches, m, inlier_indices):
@@ -215,33 +234,30 @@ def leastSquaresFit(f1, f2, matches, m, inlier_indices):
     '''
 
     # This function needs to handle two possible motion models,
-    # pure translations (eTranslate)
+    # pure translations (eTranslate) 
     # and full homographies (eHomography).
 
     M = np.eye(3)
+
     if m == eTranslate:
-        # For spherically warped images, the transformation is a
-        # translation and only has two degrees of freedom.
-        # Therefore, we simply compute the average translation vector
-        # between the feature in f1 and its match in f2 for all inliers.
+        #For spherically warped images, the transformation is a 
+        #translation and only has two degrees of freedom.
+        #Therefore, we simply compute the average translation vector
+        #between the feature in f1 and its match in f2 for all inliers.
 
         u = 0.0
         v = 0.0
-
 
         for i in range(len(inlier_indices)):
             #BEGIN TODO 6
             #Use this loop to compute the average translation vector
             #over all inliers.
             #TODO-BLOCK-BEGIN
-
-            point1 = f1[matches[inlier_indices[i]].queryIdx].pt
-            point2 = f2[matches[inlier_indices[i]].trainIdx].pt
-
-            u += point2[0] - point1[0]
-            v += point2[1] - point1[1]
-
-
+            index = inlier_indices[i]
+            f1_inlier = f1[matches[index].queryIdx]
+            f2_inlier = f2[matches[index].trainIdx]
+            u += (f2_inlier.pt[0] - f1_inlier.pt[0])
+            v += (f2_inlier.pt[1] - f1_inlier.pt[1])
             #TODO-BLOCK-END
             #END TODO
 
@@ -256,12 +272,11 @@ def leastSquaresFit(f1, f2, matches, m, inlier_indices):
         #Compute a homography M using all inliers.
         #This should call computeHomography.
         #TODO-BLOCK-BEGIN
-
-        inlier_match = []
-        for i in range(len(inlier_indices)):
-            inlier_match.append(matches[inlier_indices[i]])
-        M = computeHomography(f1, f2, inlier_match)
-
+        matches_indices = []
+        for index in inlier_indices:
+            matches_indices.append(matches[index])
+        M = computeHomography(f1, f2, matches_indices)
+        M = M/M[2][2]
         #TODO-BLOCK-END
         #END TODO
 
