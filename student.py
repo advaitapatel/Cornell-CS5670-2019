@@ -91,15 +91,15 @@ def project_impl(K, Rt, points):
     """
 
     point_shape = np.shape(points)
-    p = np.zeros((point_shape[0],point_shape[0],3))
+    p = np.zeros((point_shape[0],point_shape[1],3))
 
     calib = np.dot(K, Rt)
     print np.shape(calib)
 
-    projection = np.zeros((point_shape[0],point_shape[0],2))
+    projection = np.zeros((point_shape[0],point_shape[1],2))
 
     for i in xrange(point_shape[0]):
-        for j in xrange(point_shape[0]):    
+        for j in xrange(point_shape[1]):    
             val = np.ones((1,4))
             val[0, 0:3] = points[i][j][:] 
             proj  = np.dot(calib, val.T)
