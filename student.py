@@ -159,7 +159,47 @@ def preprocess_ncc_impl(image, ncc_size):
     Output:
         normalized -- heigth x width x (channels * ncc_size**2) array
     """
-    return
+    
+    # (1) Compute and subtract the mean.
+
+    print "preprocess_ncc_impl"
+
+    image_shape = np.shape(image)
+    channels = image_shape[2]
+    height = image_shape[0]
+    width = image_shape[1]
+
+    normalized = np.zeros((height, width, (channels * ncc_size**2)))
+    ncc_half = ncc_size/2
+
+    # take window of ncc/2 up down left right if in boundary else put value 0 
+    for i in xrange(height):
+        for j in xrange(width):
+            if i+ncc_half < height and i-ncc_half >= 0 and j+ncc_half < width and j-ncc_half >= 0:
+                for ch in xrange(channels):
+                    patch = np.ndarray.flatten(image[(i-ncc_half):(i+ncc_half+1),(j-ncc_half):(j+ncc_half+1),ch])
+                    mean = np.mean(patch)
+                    val = patch - mean
+                    normalized[i][j][ch*ncc_size**2:(ch+1)*ncc_size**2] = val
+               
+                std = np.sqrt(np.sum(normalized[i][j][:]**2))
+                if std < 1e-6:
+                    normalized[i][j][:] = 0
+                else:
+                    normalized[i][j][:] /= std
+
+
+    # loop over every pixel and mean the patch of the pixel per channel and store it as a flattened vector of every pixel
+
+    # subtract mean of patch from the patch
+
+    # ssd of pixel patch across all channel 
+
+    # divide flatten vector by ssd if greater than 0
+
+    # (2) Normalize the vector.
+    
+    return normalized
 
 
 def compute_ncc_impl(image1, image2):
@@ -174,4 +214,8 @@ def compute_ncc_impl(image1, image2):
         ncc -- height x width normalized cross correlation between image1 and
                image2.
     """
-    return
+
+    print "compute ncc impl"
+    dot = image1 * image2
+    ncc = np.sum(dot, axis = 2)
+    return ncc
