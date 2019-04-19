@@ -36,46 +36,54 @@ def compute_photometric_stereo_impl(lights, images):
     """
     
     L_transpose = lights.T
-
-    first_term = np.linalg.inv(np.matmul(L_transpose, lights)) 
-    print np.shape(first_term)
-
-    print np.shape(images)
-    print np.shape(lights)
-
-    shape = np.shape(images)
-    
-    img_matrix = np.zeros((shape[1], shape[2], shape[0], shape[3]))
-
-    for count in xrange(shape[0]):
-        for i in xrange(shape[1]):
-            for j in xrange(shape[2]):
-                img_matrix[i][j][count] = images[count][i][j]
-    print np.shape(img_matrix)
-
-    second_term = np.zeros((shape[1], shape[2], 3, 3))
-
-    G = np.zeros((shape[1], shape[2], 3, 3))
-
-    for i in xrange(shape[1]):
-        for j in xrange(shape[2]):
-            second_term[i][j] = np.matmul(L_transpose,img_matrix[i][j])
-            G[i][j] = np.matmul(first_term,second_term[i][j])
+    shapes = np.shape(images)
+    images = np.array(images)
 
 
-    k_d = np.zeros((shape[1], shape[2], 3))
-    N = np.zeros((shape[1], shape[2], 3))
-    
-    for i in xrange(shape[1]):
-        for j in xrange(shape[2]):
-            for channel in xrange(3):
-                k_d[i][j][channel] = np.linalg.norm(G[i][j][channel])                
-                N[i][j][channel] = G[i][j][:][channel]//k_d[i][j][channel]
+    if shapes[3] == 3:
+        image_matrix = images.reshape(shapes[0], shapes[1]*shapes[2], shapes[3])
 
-    print np.shape(k_d)
-    #print np.shape(N)
-    return k_d
+        k_d = np.zeros((shapes[3], shapes[1]*shapes[2]))
+        for i in range(2,-1,-1):
+            first_term = np.linalg.inv(np.dot(L_transpose, lights))
+            second_term = np.dot(L_transpose, image_matrix[:,:,i])
+            G = np.dot(first_term, second_term)
+            k_d[i,:] = np.sqrt(np.sum(G**2, axis = 0))
 
+        l2 = np.sqrt(np.sum(k_d**2, axis = 0))
+
+        k_d[:, l2 < 1e-7] = 0
+
+        temp = k_d[0,:]
+        temp[k_d[0,:] == 0] = 1.0
+
+        normals = G/temp
+        normals[:, l2 < 1e-7] = 0
+
+        normals = normals.transpose().reshape(shapes[1], shapes[2], 3)
+        k_d = k_d.transpose().reshape(shapes[1], shapes[2], 3)
+    elif shapes[3] == 1:
+        image_matrix = images.reshape(shapes[0], shapes[1]*shapes[2])
+
+        first_term = np.linalg.inv(np.dot(L_transpose, lights))
+        second_term = np.dot(L_transpose, image_matrix)
+        G = np.dot(first_term, second_term)
+        k_d = np.sqrt(np.sum(G**2, axis = 0))
+
+        temp = k_d.copy()
+        temp[k_d == 0] = 1.0
+
+        normals = G/temp
+        normals[:, k_d < 1e-7] = 0
+        k_d[k_d < 1e-7 ] = 0
+
+        normals = normals.transpose().reshape(shapes[1], shapes[2], 3)
+        k_d = k_d.transpose().reshape(shapes[1], shapes[2], 1)
+
+
+
+
+    return k_d, normals
 
 
 
@@ -91,17 +99,15 @@ def project_impl(K, Rt, points):
     """
 
     point_shape = np.shape(points)
-    p = np.zeros((point_shape[0],point_shape[1],3))
 
     calib = np.dot(K, Rt)
-    print np.shape(calib)
 
     projection = np.zeros((point_shape[0],point_shape[1],2))
 
     for i in xrange(point_shape[0]):
         for j in xrange(point_shape[1]):    
             val = np.ones((1,4))
-            val[0, 0:3] = points[i][j][:] 
+            val[0, 0:3] = points[i][j][:3] 
             proj  = np.dot(calib, val.T)
             proj_values = [proj[0]/proj[2], proj[1]/proj[2]]
             projection[i][j] = proj_values
